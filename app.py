@@ -72,13 +72,13 @@ def calculate():
 
         # Validate inputs
         if not (-90 <= lat <= 90):
-            return render_template("result.html", error="Invalid latitude. Must be between -90 and 90.")
+            return render_template("result/page.jsx", error="Invalid latitude. Must be between -90 and 90.")
         if not (-180 <= lon <= 180):
-            return render_template("result.html", error="Invalid longitude. Must be between -180 and 180.")
+            return render_template("result/page.jsx", error="Invalid longitude. Must be between -180 and 180.")
         if floor_area <= 0:
-            return render_template("result.html", error="Floor area must be greater than 0.")
+            return render_template("result/page.jsx", error="Floor area must be greater than 0.")
         if monthly_bill <= 0:
-            return render_template("result.html", error="Monthly bill must be greater than 0.")
+            return render_template("result/page.jsx", error="Monthly bill must be greater than 0.")
 
         # Constants with explicit float conversion
         panel_size = float(request.form.get("panel_size", 1.7))
@@ -96,7 +96,7 @@ def calculate():
         solar_data = fetch_solar_data(lat, lon, optimal_tilt, azimuth, system_capacity)
 
         if not solar_data:
-            return render_template("result.html", error="Unable to fetch solar data. Please try again later.")
+            return render_template("result/page.jsx", error="Unable to fetch solar data. Please try again later.")
 
         # Process results - Modified to handle nested electricity values
         hourly_outputs = []
@@ -109,7 +109,7 @@ def calculate():
                 print(f"Unexpected output format for {timestamp}: {output}")
 
         if not hourly_outputs:
-            return render_template("result.html", error="No valid solar output data received.")
+            return render_template("result/page.jsx", error="No valid solar output data received.")
 
         total_annual_energy = sum(hourly_outputs)
         monthly_energy = total_annual_energy / 12
@@ -133,7 +133,7 @@ def calculate():
         
     except Exception as e:
         print(f"Calculation error: {str(e)}")
-        return render_template("result.html", error=f"An error occurred during calculations: {str(e)}")
+        return render_template("result/page.jsx", error=f"An error occurred during calculations: {str(e)}")
 
 if __name__ == "__main__":
     app.run(debug=True)
