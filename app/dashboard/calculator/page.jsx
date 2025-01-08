@@ -36,7 +36,7 @@ function Calculator() {
       } else {
         // Store results in localStorage for the result page
         localStorage.setItem('solarResults', JSON.stringify(data));
-        router.push('/dashboard/calculator/result');
+        router.push('app/dashboard/result/');
       }
     } catch (error) {
       console.error('Detailed error:', error)
