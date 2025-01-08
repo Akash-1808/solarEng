@@ -1,9 +1,16 @@
-from flask import Flask, render_template, request
+from flask import Flask, request, jsonify
+from flask_cors import CORS  # Add CORS support
 import requests
 import math
 import json
 
 app = Flask(__name__)
+CORS(app, resources={
+    r"/api/*": {
+        "origins": ["http://localhost:3000"],  # Add your Next.js development URL
+        "methods": ["POST", "OPTIONS"]
+    }
+})
 
 # Renewable Ninja API details
 RENEWABLE_NINJA_API_URL = "https://www.renewables.ninja/api/data/pv"
@@ -57,34 +64,37 @@ def fetch_solar_data(lat, lon, tilt, azimuth, capacity):
 def calculate_optimal_tilt(lat):
     return abs(lat) * 0.87 if abs(lat) < 25 else abs(lat) * 0.76
 
-@app.route("/")
+@app.route("/", methods=["GET"])
 def index():
-    return render_template("index.html")
+    return jsonify({"status": "API is running"})
 
-@app.route("/calculate", methods=["POST"])
+@app.route("/api/calculate", methods=["POST"])
 def calculate():
     try:
+        # Get JSON data from request
+        data = request.get_json() if request.is_json else request.form
+
         # User Inputs with explicit float conversion
-        lat = float(request.form["latitude"])
-        lon = float(request.form["longitude"])
-        floor_area = float(request.form["floor_area"])
-        monthly_bill = float(request.form["monthly_bill"])
+        lat = float(data.get("latitude"))
+        lon = float(data.get("longitude"))
+        floor_area = float(data.get("floor_area"))
+        monthly_bill = float(data.get("monthly_bill"))
 
         # Validate inputs
         if not (-90 <= lat <= 90):
-            return render_template("result/page.jsx", error="Invalid latitude. Must be between -90 and 90.")
+            return jsonify({"error": "Invalid latitude. Must be between -90 and 90."}), 400
         if not (-180 <= lon <= 180):
-            return render_template("result/page.jsx", error="Invalid longitude. Must be between -180 and 180.")
+            return jsonify({"error": "Invalid longitude. Must be between -180 and 180."}), 400
         if floor_area <= 0:
-            return render_template("result/page.jsx", error="Floor area must be greater than 0.")
+            return jsonify({"error": "Floor area must be greater than 0."}), 400
         if monthly_bill <= 0:
-            return render_template("result/page.jsx", error="Monthly bill must be greater than 0.")
+            return jsonify({"error": "Monthly bill must be greater than 0."}), 400
 
         # Constants with explicit float conversion
-        panel_size = float(request.form.get("panel_size", 1.7))
-        panel_efficiency = float(request.form.get("panel_efficiency", 20)) / 100
-        electricity_rate = float(request.form.get("electricity_rate", 7))
-        co2_offset = float(request.form.get("co2_offset", 0.7))
+        panel_size = float(data.get("panel_size", 1.7))
+        panel_efficiency = float(data.get("panel_efficiency", 20)) / 100
+        electricity_rate = float(data.get("electricity_rate", 7))
+        co2_offset = float(data.get("co2_offset", 0.7))
 
         # Calculate system specifications
         optimal_tilt = calculate_optimal_tilt(lat)
@@ -96,7 +106,7 @@ def calculate():
         solar_data = fetch_solar_data(lat, lon, optimal_tilt, azimuth, system_capacity)
 
         if not solar_data:
-            return render_template("result/page.jsx", error="Unable to fetch solar data. Please try again later.")
+            return jsonify({"error": "Unable to fetch solar data. Please try again later."}), 500
 
         # Process results - Modified to handle nested electricity values
         hourly_outputs = []
@@ -109,7 +119,7 @@ def calculate():
                 print(f"Unexpected output format for {timestamp}: {output}")
 
         if not hourly_outputs:
-            return render_template("result/page.jsx", error="No valid solar output data received.")
+            return jsonify({"error": "No valid solar output data received."}), 500
 
         total_annual_energy = sum(hourly_outputs)
         monthly_energy = total_annual_energy / 12
@@ -120,20 +130,22 @@ def calculate():
         excess_energy = max(0, total_annual_energy - annual_usage_kwh)
         co2_reduction = total_annual_energy * co2_offset
 
-        return render_template(
-            "result.html",
-            max_panels=round(max_panels),
-            optimal_tilt=round(optimal_tilt, 1),
-            total_annual_energy=round(total_annual_energy, 1),
-            monthly_energy=round(monthly_energy, 1),
-            savings=round(savings, 2),
-            excess_energy=round(excess_energy, 1),
-            co2_reduction=round(co2_reduction, 1)
-        )
+        return jsonify({
+            "max_panels": round(max_panels),
+            "optimal_tilt": round(optimal_tilt, 1),
+            "total_annual_energy": round(total_annual_energy, 1),
+            "monthly_energy": round(monthly_energy, 1),
+            "savings": round(savings, 2),
+            "excess_energy": round(excess_energy, 1),
+            "co2_reduction": round(co2_reduction, 1)
+        })
         
+    except KeyError as e:
+        return jsonify({"error": f"Missing required field: {str(e)}"}), 400
+    except ValueError as e:
+        return jsonify({"error": f"Invalid input value: {str(e)}"}), 400
     except Exception as e:
-        print(f"Calculation error: {str(e)}")
-        return render_template("result/page.jsx", error=f"An error occurred during calculations: {str(e)}")
+        return jsonify({"error": f"An unexpected error occurred: {str(e)}"}), 500
 
 if __name__ == "__main__":
     app.run(debug=True)
