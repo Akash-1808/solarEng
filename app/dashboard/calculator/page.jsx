@@ -47,9 +47,11 @@ function Calculator() {
   };
 
   return (
-    <div className="mx-auto max-w-screen-xl px-4 py-16 sm:px-6 lg:px-8 bg-slate-100 rounded-lg">
-      <div className="mx-auto max-w-lg text-center">
-        <h1 className="text-2xl font-bold sm:text-3xl">Solar Energy Calculator</h1>
+    
+
+<div className="mx-auto max-w-screen-xl px-4 py-16 sm:px-6 lg:px-8 bg-slate-100 rounded-lg">
+  <div className="mx-auto max-w-lg text-center">
+    <h1 className="text-2xl font-bold sm:text-3xl">Solar Energy Calculator</h1>
 
         <p className="mt-4 text-gray-500">
           Calculate your solar energy potential and savings based on your location and usage
